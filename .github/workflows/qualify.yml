@@ -121,7 +121,7 @@ jobs:
         shell: bash
         run: |
           # Set this literal only after an approved public fixture digest is verified.
-          fixture=''
+          fixture='ghcr.io/openhands/agent-server@sha256:0afca19fde9455b003d3b58e17d461d3fbe406a1c3aba7fbfe55ffac82851b21'
           if [[ ! "$fixture" =~ ^[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
             echo 'Hosted qualification pending an approved public Docker cleanup fixture pinned by digest.' >&2
             exit 1
