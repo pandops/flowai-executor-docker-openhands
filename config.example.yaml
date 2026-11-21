@@ -1,0 +1,71 @@
+# executor_docker_openhands configuration. The container reads
+# /etc/flowai/config.yaml; mount its directory writable: the first start with
+# --token stores the JWT here (mode 0600), and the publisher_seq state file
+# executor-state.json is kept next to this file.
+broker:
+  # NATS server URL of the platform broker.
+  url: tls://nats.example.internal:4222
+  # PEM CA bundle that signed the NATS server certificate.
+  ca_file: /etc/flowai/ca.pem
+  # Stored by the first start with --token <jwt>; leave it out until then.
+  # token: ""
+
+# HTTP edges, called with the claim token (no other HTTP calls are made).
+env_registry_url: http://env-registry.example.internal:8080
+model_registry_url: http://model-registry.example.internal:8080
+
+# Capacity: tasks run at once; pending claims hold a slot too.
+max_parallel_tasks: 2
+
+# Heartbeat timing (whole seconds). Connection loss starts after
+# heartbeat_miss_limit failed heartbeats; connection_wait (W) is how long
+# paused agents are kept without any heartbeat reply.
+heartbeat_interval: 15s
+heartbeat_miss_limit: 3
+connection_wait: 600s
+
+# How often a pending claim is checked again.
+pending_recheck_interval: 30s
+# Broker request and publish acknowledgement timeouts, and the pull wait.
+request_timeout: 5s
+publish_ack_timeout: 5s
+pull_wait: 5s
+
+# Recovery cache (bbolt) and the stable cleanup_id; keep both on a
+# persistent volume, owner-only.
+cache_dir: /var/lib/flowai/executor
+cleanup_id_dir: /var/lib/flowai/executor
+
+# Health probes (GET /v1/livez, GET /v1/readyz). Publish the port on the
+# host's loopback only, for example -p 127.0.0.1:8020:8080.
+executor_api_bind: ":8080"
+
+# Container runtime socket mounted into the Executor container.
+docker_socket_path: /run/flowai/runtime.sock
+# Host where task containers publish their agent-server port, as seen from
+# the Executor.
+docker_published_host: host.containers.internal
+# Host ports for task containers; the range must hold max_parallel_tasks.
+openhands_host_port_start: 18000
+openhands_host_port_end: 18099
+# Session key of the in-container agent servers; empty mints one per start.
+openhands_api_key: ""
+openhands_startup_timeout: 60s
+# SIGTERM drain deadline for running tasks.
+openhands_drain_timeout: 30s
+image_pull_policy: if-not-present
+# Network every task container joins to reach the LiteLLM data plane.
+litellm_data_network: flowai-litellm-data
+websocket_dial_timeout: 5s
+
+# Keep a terminal task container this long after JetStream acknowledged its
+# terminal event; the slot stays in use meanwhile.
+finished_cleanup_delay: 0s
+failed_cleanup_delay: 0s
+
+# OpenHands conversation start.
+openhands_workspace: /workspace/project
+openhands_llm_usage_id: flowai-executor
+openhands_initial_run: true
+
+log_level: info

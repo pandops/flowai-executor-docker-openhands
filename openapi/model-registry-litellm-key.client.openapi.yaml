@@ -1,0 +1,86 @@
+openapi: 3.1.0
+info:
+  title: model-registry LiteLLM key edge (client view)
+  version: 0.48.0
+  description: >-
+    The one model-registry HTTP call the Executor makes, once per claim
+    after the launch-parameter open. Authoritative schema:
+    svc/model-registry/schemas/edge.litellm-key.reply.schema.json.
+servers:
+  - url: "{model_registry_url}"
+    variables:
+      model_registry_url:
+        default: http://model-registry:8080
+paths:
+  /v1/tasks/{task_id}/litellm-key:
+    get:
+      operationId: getLiteLLMKey
+      summary: Get the task's own LiteLLM virtual key and data-plane route.
+      security:
+        - claimToken: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: >-
+            Passed to the agent's inline LLM settings. A missing value fails
+            the claim with llm_configuration_incomplete; the Executor never
+            falls back to its own environment.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_API_KEY]
+                properties:
+                  OPENAI_BASE_URL:
+                    type: string
+                    minLength: 1
+                  OPENAI_MODEL:
+                    type: string
+                    minLength: 1
+                  OPENAI_API_KEY:
+                    type: string
+                    minLength: 1
+        "404":
+          description: claim_not_current; the Executor drops the claim silently.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: >-
+            configuration_error with failure_reason llm_configuration_incomplete;
+            failed, retryable false.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Unavailable; pending with reason dependency_unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    claimToken:
+      type: http
+      scheme: bearer
+      description: The claim token task-manager returned for this claim.
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        failure_reason:
+          type: string
