@@ -1,4 +1,4 @@
-name: Qualify and publish executor-docker-openhands
+name: Qualify and publish executor_docker_openhands
 
 on:
   workflow_dispatch:
