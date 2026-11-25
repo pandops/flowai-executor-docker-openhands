@@ -1,0 +1,85 @@
+openapi: 3.1.0
+info:
+  title: env-registry launch-parameter open edge (client view)
+  version: 0.48.0
+  description: >-
+    The one env-registry call the Executor makes, once per claim after the
+    model check. Authoritative schemas:
+    svc/env-registry/schemas/executor.launch-parameters-open.reply.schema.json
+    and svc/env-registry/schemas/error.reply.schema.json.
+servers:
+  - url: "{env_registry_url}"
+    variables:
+      env_registry_url:
+        default: http://env-registry:8080
+paths:
+  /v1/tasks/{task_id}/launch-parameters/open:
+    get:
+      operationId: openLaunchParameters
+      summary: Open the attempt's launch-parameter snapshot.
+      security:
+        - claimToken: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Values become the task container's environment.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [values]
+                properties:
+                  values:
+                    type: object
+                    additionalProperties:
+                      type: string
+        "404":
+          description: claim_not_current; the Executor drops the claim silently.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: >-
+            configuration_error; the Executor publishes failed with this
+            failure_reason and retryable false.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: >-
+            Unavailable; the Executor keeps the claim pending with reason
+            dependency_unavailable and rechecks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    claimToken:
+      type: http
+      scheme: bearer
+      description: The claim token task-manager returned for this claim.
+  schemas:
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: [integer, "null"]
+        failure_reason:
+          type: string
+        missing_parameter:
+          type: string
